@@ -1,5 +1,5 @@
 # Jaysigx-betterCams
-just better cams
+just better cams.
 
 # Fivem Camera Control Scripts
 
