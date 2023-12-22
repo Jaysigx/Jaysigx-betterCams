@@ -1,30 +1,31 @@
-local lastVehicleDamage = 0.0
-local currentVehicle = nil
+-- Vehicle damage shake effect
+local lastDamage = 0.0
+local vehicle = nil
 
 Citizen.CreateThread(function()
     while true do
         Wait(0)
         local playerPed = PlayerPedId()
-        local isInVehicle = IsPedInAnyVehicle(playerPed)
-        
-        if isInVehicle then
-            local vehicle = GetVehiclePedIsIn(playerPed, false)
-            if vehicle ~= currentVehicle then
-                currentVehicle = vehicle
-                lastVehicleDamage = GetVehicleBodyHealth(vehicle)
+
+        if IsPedInAnyVehicle(playerPed) then
+            local curVehicle = GetVehiclePedIsIn(playerPed, false)
+
+            if curVehicle ~= vehicle then
+                vehicle = curVehicle
+                lastDamage = GetVehicleBodyHealth(vehicle)
             else
-                local currentHealth = GetVehicleBodyHealth(vehicle)
-                local damage = lastVehicleDamage - currentHealth
+                local curHealth = GetVehicleBodyHealth(vehicle)
+                local damage = lastDamage - curHealth
 
                 if damage > 5 then
-                    local shakeIntensity = math.min(damage / 200.0, 1.0)
-                    ShakeGameplayCam("SMALL_EXPLOSION_SHAKE", shakeIntensity)
+                    local shakeRate = math.min(damage / 200.0, 1.0) -- Scale the shake rate
+                    ShakeGameplayCam("SMALL_EXPLOSION_SHAKE", shakeRate)
                 end
 
-                lastVehicleDamage = currentHealth
+                lastDamage = curHealth
             end
         else
-            currentVehicle = nil
+            vehicle = nil
         end
     end
 end)
@@ -56,6 +57,7 @@ Citizen.CreateThread(function()
     end
 end)
 
+-- Vehicle driving shake effect
 local isDriving = false
 
 Citizen.CreateThread(function()
@@ -68,24 +70,26 @@ Citizen.CreateThread(function()
             local speed = GetEntitySpeed(vehicle) * 3.6 -- Convert speed to km/h
 
             if DoesEntityExist(vehicle) then
-                if speed >= 250 then
-                    ShakeGameplayCam('SKY_DIVING_SHAKE', 0.75)
-                    Citizen.Wait(1000)
-                    StopGameplayCamShaking(0)
-                elseif speed >= 5 and not isDriving then
+                if speed >= 5 and not isDriving then
+                    isDriving = true
                     ShakeGameplayCam('SKY_DIVING_SHAKE', 0.3)
                     Citizen.Wait(500)
                     StopGameplayCamShaking(0)
-                elseif speed < 1.0 and not IsVehicleInBurnout(vehicle) then
+                elseif speed >= 250 and isDriving then
+                    isDriving = false
                     ShakeGameplayCam('SKY_DIVING_SHAKE', 0.75)
                     Citizen.Wait(1000)
                     StopGameplayCamShaking(0)
-                else
+                elseif speed < 1.0 and IsVehicleInBurnout(vehicle) then
+                    isDriving = false
+                    ShakeGameplayCam('SKY_DIVING_SHAKE', 0.75)
+                    Citizen.Wait(1000)
+                    StopGameplayCamShaking(0)
+                elseif speed == 0 then
                     isDriving = false
                 end
             end
-        else
-            isDriving = false
         end
     end
 end)
+
