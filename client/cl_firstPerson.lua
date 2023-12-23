@@ -1,6 +1,6 @@
 local attachedCam = nil
 local sensitivity = 10.0
-local springiness = 0.1 -- Adjust the springiness factor
+local springiness = 0.25 -- Adjust the springiness factor
 local parallaxFactor = 0.5
 local isHudComponent16Active = false
 local isHudComponent19Active = false
@@ -9,7 +9,7 @@ local prevMouseX, prevMouseY = 0.0, 0.0
 local minXRotation = -60.0
 local maxXRotation = 60.0 
 
-local defaultFOV = 70.0
+local defaultFOV = 65.0
 local highSpeedFOV = 90.0
 local speedThreshold = 90.0 -- Speed threshold for changing FOV (in mph)
 
@@ -86,7 +86,7 @@ Citizen.CreateThread(function()
                 SetCamRot(attachedCam, newCamRotX, currentCamRot.y, newCamRotZ, 2)
                 
                 SetCamFov(attachedCam, 70.0)
-                AttachCamToPedBone(attachedCam, playerPed, 31086, 0.0, 0.1, 0.05, true)
+                AttachCamToPedBone(attachedCam, playerPed, 31086, 0.05, 0.05, 0.01, true)
 
                 local playerCoords = GetPedBoneCoords(playerPed, 31086)
                 local currentCamCoords = GetCamCoord(attachedCam)
@@ -119,28 +119,24 @@ Citizen.CreateThread(function()
                 if DoesEntityExist(vehicle) then
                     local speed = GetEntitySpeed(vehicle)
                     local speedMph = speed * 2.23694
-
-                    if speedMph > 5 then -- Adjust this threshold to suit the desired speed for camera movement
-                        isCarMoving = true
-                    else
-                        isCarMoving = false
-                    end
-
+                
+                    local movingThreshold = 5
+                    local highSpeedFOV = 90.0
+                
+                    local isCarMoving = speedMph > movingThreshold
+                
                     if isCarMoving then
-                        local fov = math.min(70.0 + (speedMph - 5) * 0.5, highSpeedFOV)
+                        local fov = math.min(70.0 + (speedMph - movingThreshold) * 0.5, highSpeedFOV)
                         SetCamFov(attachedCam, fov)
-
-                        local vehicleRotation = GetEntityRotation(vehicle)
-                        local adjustedVehicleRotation = vector3(0.0, vehicleRotation.y, 0.0)
-
-                        local firstPersonRot = GetGameplayCamRot()
-                        local lerpedRotX = LerpAngle(newCamRotX, firstPersonRot.x, springiness) -- Springy blend with first-person rotation (X axis)
-                        local lerpedRotZ = LerpAngle(newCamRotZ, firstPersonRot.z, springiness) -- Springy blend with first-person rotation (Z axis)
-                        
-                        SetCamRot(attachedCam, lerpedRotX, adjustedVehicleRotation.y, lerpedRotZ, 2)
+                
+                        local firstPersonCamRot = GetGameplayCamRot()
+                        local vehicleHeading = GetEntityHeading(vehicle)
+                
+                        local lerpedRotZ = LerpAngle(firstPersonCamRot.z, vehicleHeading, 0.5) -- Adjust the springiness factor (0.3 in this case)
+                
+                        SetCamRot(attachedCam, firstPersonCamRot.x, firstPersonCamRot.y, lerpedRotZ, 2)
                     end
                 end
-
                 RenderScriptCams(1, 0, attachedCam, 0, 0)
                 HideHudComponentThisFrame(14)
             end
